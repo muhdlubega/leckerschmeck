@@ -8,6 +8,8 @@
   "scripts": {
     "dev": "vinext dev",
     "build": "vinext build",
+    "build:pages": "node scripts/build-cloudflare-pages.mjs",
+    "deploy:pages": "npm run build:pages && wrangler pages deploy",
     "start": "wrangler dev --config dist/server/wrangler.json",
     "lint": "oxlint",
     "format": "oxfmt",

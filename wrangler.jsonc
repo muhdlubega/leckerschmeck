@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "leckerschmeck",
+  "pages_build_output_dir": "./dist/pages",
+  "compatibility_date": "2026-09-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "leckerschmeck-db",
+      "database_id": "504ffcd8-22a1-4c27-a91b-c4c6bdc0cc4e"
+    }
+  ]
+}
