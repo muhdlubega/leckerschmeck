@@ -36,15 +36,33 @@ export function splitFlowPhases(flow: FlowNode[]): {
   cook: FlowNode[];
   finish: FlowNode[];
 } {
+  if (flow.length === 0) return { prepare: [], cook: [], finish: [] };
   const firstCook = flow.findIndex(isCookingNode);
-  if (firstCook < 0) return { prepare: flow, cook: [], finish: [] };
+  const lastSteps = Math.min(3, Math.max(1, Math.ceil(flow.length / 4)));
+  if (firstCook < 0) {
+    // For no-heat recipes, reserve the final one to three actions for plating,
+    // resting, or serving so Finish always communicates a real endpoint.
+    const finishStart = Math.max(1, flow.length - lastSteps);
+    const cookStart = Math.max(0, finishStart - 1);
+    return {
+      prepare: flow.slice(0, cookStart),
+      cook: flow.slice(cookStart, finishStart),
+      finish: flow.slice(finishStart),
+    };
+  }
 
   const finishOffset = flow.slice(firstCook + 1).findIndex(isFinishingNode);
-  const firstFinish = finishOffset < 0 ? flow.length : firstCook + 1 + finishOffset;
+  const firstFinish = finishOffset < 0
+    ? Math.max(firstCook + 1, flow.length - lastSteps)
+    : firstCook + 1 + finishOffset;
+
+  // A single terminal cooking action still doubles as the finished result.
+  // This keeps the visual workflow useful for short extracted recipes.
+  const finishBoundary = Math.min(flow.length - 1, Math.max(firstCook, firstFinish));
 
   return {
     prepare: flow.slice(0, firstCook),
-    cook: flow.slice(firstCook, firstFinish),
-    finish: flow.slice(firstFinish),
+    cook: flow.slice(firstCook, finishBoundary),
+    finish: flow.slice(finishBoundary),
   };
 }

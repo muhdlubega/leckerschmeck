@@ -32,4 +32,18 @@ describe('flow phase classification', () => {
     expect(phases.cook.map(item => item.id)).toEqual(['cook']);
     expect(phases.finish.map(item => item.id)).toEqual(['finish']);
   });
+
+  it('reserves the final actions for Finish when extraction has no finish type', () => {
+    const phases = splitFlowPhases([
+      node('mix', 'mix', 'Mix ingredients'),
+      node('bake', 'bake', 'Bake until golden'),
+      node('rest', 'prep', 'Rest for 10 minutes'),
+      node('slice', 'prep', 'Slice and serve'),
+    ]);
+
+    expect(phases.prepare.map(item => item.id)).toEqual(['mix']);
+    expect(phases.cook.map(item => item.id)).toEqual(['bake']);
+    expect(phases.finish.map(item => item.id)).toEqual(['rest', 'slice']);
+    expect(phases.finish.length).toBeGreaterThan(0);
+  });
 });

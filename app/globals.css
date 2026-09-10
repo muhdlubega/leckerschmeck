@@ -51,17 +51,21 @@
 body { font-family: var(--font-ui), Arial, Helvetica, sans-serif; }
 
 .animated-hero-background {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   background-image:
-    radial-gradient(circle at 12% 18%, var(--soft-coral), transparent 34%),
-    radial-gradient(circle at 88% 8%, var(--soft-sage), transparent 32%),
+    radial-gradient(circle at 12% 18%, color-mix(in oklab, var(--soft-coral) 92%, var(--accent)), transparent 48%),
+    radial-gradient(circle at 88% 8%, color-mix(in oklab, var(--soft-sage) 88%, var(--primary)), transparent 46%),
     linear-gradient(
       115deg,
-      color-mix(in oklab, var(--background) 96%, var(--soft-sage)),
-      color-mix(in oklab, var(--background) 92%, var(--soft-coral)),
-      color-mix(in oklab, var(--background) 95%, var(--primary))
+      color-mix(in oklab, var(--background) 88%, var(--soft-sage)),
+      color-mix(in oklab, var(--background) 78%, var(--soft-coral)),
+      color-mix(in oklab, var(--background) 84%, var(--primary))
     );
-  background-size: 150% 150%, 160% 160%, 300% 300%;
-  animation: hero-gradient-drift 14s ease-in-out infinite;
+  background-size: 220% 220%, 220% 220%, 420% 420%;
+  background-blend-mode: multiply, multiply, normal;
+  animation: hero-gradient-drift 8s ease-in-out infinite;
 }
 
 @keyframes hero-gradient-drift {
@@ -69,7 +73,7 @@ body { font-family: var(--font-ui), Arial, Helvetica, sans-serif; }
     background-position: 0% 20%, 100% 0%, 0% 50%;
   }
   50% {
-    background-position: 18% 5%, 80% 22%, 100% 50%;
+    background-position: 76% 70%, 18% 82%, 100% 50%;
   }
 }
 
