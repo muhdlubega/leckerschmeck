@@ -17,5 +17,5 @@ export function extractionPrompt(content: string, sourceUrl: string, targetLangu
 }
 
 export function translationPrompt(recipeJson: string, targetLanguage: string) {
-  return `${RECIPE_SYSTEM_PROMPT}\n\nTranslate the human-readable text of this recipe to ${languagePromptName(targetLanguage)}. Preserve every ID, number, unit, URL, relationship and source field exactly. Set language to ${targetLanguage}, translatedFrom to the input language, and preserve originalLanguage. Return the complete recipe JSON.\n\nRECIPE:\n${recipeJson}`;
+  return `${RECIPE_SYSTEM_PROMPT}\n\nTranslate every human-readable recipe field to ${languagePromptName(targetLanguage)}, including the title, description, ingredient names, ingredient raw text, preparation notes, ingredient group names, instruction text and actions, flow labels and details, equipment, notes, serving label, and nutrition labels. Preserve every ID, number, unit, URL, relationship and source field exactly. Set language to ${targetLanguage}, translatedFrom to the input language, and preserve originalLanguage. Return the complete recipe JSON.\n\nRECIPE:\n${recipeJson}`;
 }

@@ -50,21 +50,27 @@
 
 body { font-family: var(--font-ui), Arial, Helvetica, sans-serif; }
 
-.animated-site-header {
-  background-image: linear-gradient(
-    115deg,
-    color-mix(in oklab, var(--background) 93%, var(--soft-sage)),
-    color-mix(in oklab, var(--background) 88%, var(--soft-coral)),
-    color-mix(in oklab, var(--background) 90%, var(--primary)),
-    color-mix(in oklab, var(--background) 93%, var(--soft-sage))
-  );
-  background-size: 300% 300%;
-  animation: header-gradient-drift 12s ease-in-out infinite;
+.animated-hero-background {
+  background-image:
+    radial-gradient(circle at 12% 18%, var(--soft-coral), transparent 34%),
+    radial-gradient(circle at 88% 8%, var(--soft-sage), transparent 32%),
+    linear-gradient(
+      115deg,
+      color-mix(in oklab, var(--background) 96%, var(--soft-sage)),
+      color-mix(in oklab, var(--background) 92%, var(--soft-coral)),
+      color-mix(in oklab, var(--background) 95%, var(--primary))
+    );
+  background-size: 150% 150%, 160% 160%, 300% 300%;
+  animation: hero-gradient-drift 14s ease-in-out infinite;
 }
 
-@keyframes header-gradient-drift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+@keyframes hero-gradient-drift {
+  0%, 100% {
+    background-position: 0% 20%, 100% 0%, 0% 50%;
+  }
+  50% {
+    background-position: 18% 5%, 80% 22%, 100% 50%;
+  }
 }
 
 :root {
