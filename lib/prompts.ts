@@ -1,0 +1,18 @@
+export const RECIPE_SYSTEM_PROMPT = `You extract and restructure recipes into strict JSON.
+Rules:
+- Use only information appearing in supplied content.
+- Never invent ingredients, quantities, times, temperatures, equipment, yields, or claims.
+- Return null for unavailable scalar fields and empty arrays for unavailable collections.
+- Preserve preparation qualifiers and original meaning.
+- Maintain ingredient-to-step relationships and separate ingredient preparation from cooking instructions.
+- Build a semantic flow of actual cooking dependencies; do not merely create one node per sentence.
+- Remove story, advertising, SEO, navigation, and unrelated content.
+- Return valid JSON matching the supplied example shape with no markdown or commentary.`;
+
+export function extractionPrompt(content: string, sourceUrl: string, targetLanguage: string) {
+  return `${RECIPE_SYSTEM_PROMPT}\n\nSource URL: ${sourceUrl}\nOutput language: ${targetLanguage}\nGenerate schemaVersion 1. IDs must be short stable strings. Include source, title, description, image, language, originalLanguage, translatedFrom, servings, times, ingredients, ingredientGroups, instructions, flow, equipment, notes and nutrition. Every nullable field must be present.\n\nCONTENT:\n${content}`;
+}
+
+export function translationPrompt(recipeJson: string, targetLanguage: string) {
+  return `${RECIPE_SYSTEM_PROMPT}\n\nTranslate the human-readable text of this recipe to ${targetLanguage}. Preserve every ID, number, unit, URL, relationship and source field exactly. Set language to ${targetLanguage}, translatedFrom to the input language, and preserve originalLanguage. Return the complete recipe JSON.\n\nRECIPE:\n${recipeJson}`;
+}
