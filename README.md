@@ -46,12 +46,12 @@ Secrets are used only by server routes. Never expose provider keys through `NEXT
 
 ## Commands
 
-- `pnpm dev` — local development
-- `pnpm build` — production Worker build
-- `pnpm start` — run the built Worker locally
-- `pnpm test` — deterministic unit and security tests
-- `pnpm lint` — lint source
-- `pnpm db:generate` — generate Drizzle migrations after schema changes
+- `pnpm dev`: local development
+- `pnpm build`: production Worker build
+- `pnpm start`: run the built Worker locally
+- `pnpm test`: deterministic unit and security tests
+- `pnpm lint`: lint source
+- `pnpm db:generate`: generate Drizzle migrations after schema changes
 
 ## Extraction behavior
 

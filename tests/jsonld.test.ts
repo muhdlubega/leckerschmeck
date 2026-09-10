@@ -8,4 +8,12 @@ describe('JSON-LD extraction', () => {
     const page = extractPage(html); const recipe = normalizeJsonLd(page.jsonLd!, 'https://example.com/toast');
     expect(recipe.title).toBe('Toast'); expect(recipe.ingredients).toHaveLength(2); expect(recipe.servings?.amount).toBe(2); expect(recipe.instructions[0].durationMinutes).toBe(5);
   });
+
+  it('preserves the page language and recognizes localized cooking actions', () => {
+    const html = `<html lang="ms"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Recipe","name":"Roti","recipeIngredient":["2 cawan tepung","1 cawan air"],"recipeInstructions":[{"@type":"HowToStep","text":"Bakar selama 20 minit."}]}</script></html>`;
+    const page = extractPage(html);
+    const recipe = normalizeJsonLd(page.jsonLd!, 'https://example.com/roti', page.language ?? 'en');
+    expect(recipe.language).toBe('ms');
+    expect(recipe.flow[0].type).toBe('cook');
+  });
 });

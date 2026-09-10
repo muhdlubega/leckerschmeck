@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { supportedLanguageCodes } from './languages';
 
 const nullableString = z.string().trim().max(2_000).nullable();
 const nullableNumber = z.number().nonnegative().nullable();
@@ -66,11 +67,11 @@ export type FlowNode = z.infer<typeof FlowNodeSchema>;
 export type Recipe = z.infer<typeof RecipeSchema>;
 
 export const ImportRequestSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('url'), url: z.url().max(2_048), language: z.string().min(2).max(20).default('en') }).strict(),
-  z.object({ type: z.literal('text'), text: z.string().trim().min(40).max(60_000), language: z.string().min(2).max(20).default('en') }).strict(),
+  z.object({ type: z.literal('url'), url: z.url().max(2_048), language: z.enum(['auto', ...supportedLanguageCodes]).default('auto') }).strict(),
+  z.object({ type: z.literal('text'), text: z.string().trim().min(40).max(60_000), language: z.enum(['auto', ...supportedLanguageCodes]).default('auto') }).strict(),
 ]);
 
-export const TranslateRequestSchema = z.object({ recipe: RecipeSchema, targetLanguage: z.string().min(2).max(20) }).strict();
+export const TranslateRequestSchema = z.object({ recipe: RecipeSchema, targetLanguage: z.enum(supportedLanguageCodes) }).strict();
 
 export function recipeIsComplete(value: unknown): value is Recipe {
   const result = RecipeSchema.safeParse(value);

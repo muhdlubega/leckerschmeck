@@ -34,6 +34,7 @@ function concat(chunks: Uint8Array[], size: number) { const output = new Uint8Ar
 
 export function extractPage(html: string) {
   const $ = cheerio.load(html);
+  const language = $('html').attr('lang')?.trim().slice(0, 20) || null;
   const recipes: Record<string, unknown>[] = [];
   $('script[type="application/ld+json"]').each((_, element) => {
     try { const parsed = JSON.parse($(element).text()); collectRecipes(parsed, recipes); } catch { /* malformed publisher JSON-LD is ignored */ }
@@ -41,7 +42,7 @@ export function extractPage(html: string) {
   $('script,style,noscript,nav,header,footer,aside,form,iframe,[class*="advert"],[class*="comment"],[class*="newsletter"],[class*="related"],[id*="advert"],[id*="comment"]').remove();
   const root = $('[itemtype*="schema.org/Recipe"], [class*="recipe-card"], [class*="recipe__"], article, main').first();
   const cleanedText = (root.length ? root : $('body')).text().replace(/\s+/g, ' ').trim().slice(0, 45_000);
-  return { jsonLd: recipes[0] ?? null, cleanedText };
+  return { jsonLd: recipes[0] ?? null, cleanedText, language };
 }
 
 function collectRecipes(value: unknown, output: Record<string, unknown>[]) {

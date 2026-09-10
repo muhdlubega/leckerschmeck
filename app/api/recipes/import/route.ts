@@ -1,6 +1,6 @@
 import { ImportRequestSchema } from '@/lib/recipe-schema';
 import { normalizeJsonLd } from '@/lib/recipe-normalizer';
-import { extractWithFallback } from '@/services/ai';
+import { extractWithFallback, translateWithFallback } from '@/services/ai';
 import { extractPage, fetchRecipePage } from '@/services/scraper';
 import { enforceRateLimit, RateLimitError } from '@/services/rate-limit';
 
@@ -18,8 +18,14 @@ export async function POST(request: Request) {
     const page = extractPage(html);
     if (page.jsonLd) {
       try {
-        const recipe = normalizeJsonLd(page.jsonLd, finalUrl);
-        if (recipe.ingredients.length >= 2 && recipe.instructions.length >= 1) return Response.json({ recipe, extraction: 'json-ld' }, { headers: noStore() });
+        const recipe = normalizeJsonLd(page.jsonLd, finalUrl, page.language ?? 'en');
+        if (recipe.ingredients.length >= 2 && recipe.instructions.length >= 1) {
+          if (input.language !== 'auto' && !recipe.language.toLowerCase().startsWith(input.language)) {
+            const translated = await translateWithFallback(recipe, input.language);
+            return Response.json({ recipe: translated.recipe, extraction: `json-ld+${translated.provider}` }, { headers: noStore() });
+          }
+          return Response.json({ recipe, extraction: 'json-ld' }, { headers: noStore() });
+        }
       } catch (error) { console.warn('JSON-LD incomplete', error instanceof Error ? error.message : 'unknown'); }
     }
     if (page.cleanedText.length < 80) return failure('NO_RECIPE', 422);

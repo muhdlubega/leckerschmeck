@@ -1,4 +1,5 @@
 import { parseIngredient } from './ingredient-parser';
+import { containsCookingKeyword, containsFinishingKeyword } from './flow-phases';
 import { RecipeSchema, type FlowNode, type Instruction, type Recipe } from './recipe-schema';
 
 export function parseDuration(value: unknown): number | null {
@@ -37,14 +38,16 @@ function instructionFromText(text: string, index: number): Instruction {
 }
 
 function makeFlow(instructions: Instruction[]): FlowNode[] {
-  return instructions.map((step, index) => ({ id: `flow-${index + 1}`, type: flowType(step.action), label: step.action ? `${step.action[0].toUpperCase()}${step.action.slice(1)}` : `Step ${index + 1}`, detail: step.text, inputs: index ? [`flow-${index}`] : [], outputs: index < instructions.length - 1 ? [`flow-${index + 2}`] : [], ingredientIds: step.ingredientIds, durationMinutes: step.durationMinutes, temperature: step.temperature }));
+  return instructions.map((step, index) => ({ id: `flow-${index + 1}`, type: flowType(step.action, step.text), label: step.action ? `${step.action[0].toUpperCase()}${step.action.slice(1)}` : `Step ${index + 1}`, detail: step.text, inputs: index ? [`flow-${index}`] : [], outputs: index < instructions.length - 1 ? [`flow-${index + 2}`] : [], ingredientIds: step.ingredientIds, durationMinutes: step.durationMinutes, temperature: step.temperature }));
 }
 
-function flowType(action: string | null): FlowNode['type'] {
-  if (!action) return 'prep';
+function flowType(action: string | null, text: string): FlowNode['type'] {
+  if (!action) return containsCookingKeyword(text) ? 'cook' : containsFinishingKeyword(text) ? 'cool' : 'prep';
   if (['bake', 'boil', 'fry', 'blend', 'cool', 'serve', 'rest', 'assemble', 'mix'].includes(action)) return action as FlowNode['type'];
   if (['fold', 'combine', 'add', 'stir'].includes(action)) return 'combine';
   if (['cook', 'roast', 'grill', 'simmer'].includes(action)) return 'cook';
+  if (containsCookingKeyword(`${action} ${text}`)) return 'cook';
+  if (containsFinishingKeyword(`${action} ${text}`)) return 'cool';
   return 'prep';
 }
 
@@ -55,7 +58,7 @@ function firstImage(value: unknown): string | null {
   return null;
 }
 
-export function normalizeJsonLd(data: Record<string, unknown>, sourceUrl: string): Recipe {
+export function normalizeJsonLd(data: Record<string, unknown>, sourceUrl: string, fallbackLanguage = 'en'): Recipe {
   const ingredientTexts = Array.isArray(data.recipeIngredient) ? data.recipeIngredient.filter((x): x is string => typeof x === 'string') : [];
   const ingredients = ingredientTexts.map(parseIngredient);
   const instructionTexts = flattenInstructions(data.recipeInstructions);
@@ -65,7 +68,8 @@ export function normalizeJsonLd(data: Record<string, unknown>, sourceUrl: string
   const authorValue = data.author;
   const author = typeof authorValue === 'string' ? authorValue : authorValue && typeof authorValue === 'object' && 'name' in authorValue && typeof authorValue.name === 'string' ? authorValue.name : null;
   const url = new URL(sourceUrl);
-  return RecipeSchema.parse({ schemaVersion: 1, id: crypto.randomUUID(), source: { url: sourceUrl, siteName: url.hostname.replace(/^www\./, ''), author }, title: typeof data.name === 'string' ? data.name.trim() : '', description: typeof data.description === 'string' ? data.description.trim() : null, image: firstImage(data.image), language: 'en', originalLanguage: 'en', translatedFrom: null, servings: amount ? { amount, label: yieldText || null } : null, times: { prepMinutes: parseDuration(data.prepTime), cookMinutes: parseDuration(data.cookTime), totalMinutes: parseDuration(data.totalTime) }, ingredients, ingredientGroups: [], instructions, flow: makeFlow(instructions), equipment: [], notes: [], nutrition: data.nutrition && typeof data.nutrition === 'object' ? Object.fromEntries(Object.entries(data.nutrition as Record<string, unknown>).filter(([, v]) => typeof v === 'string')) : null });
+  const sourceLanguage = typeof data.inLanguage === 'string' ? data.inLanguage.slice(0, 20) : fallbackLanguage;
+  return RecipeSchema.parse({ schemaVersion: 1, id: crypto.randomUUID(), source: { url: sourceUrl, siteName: url.hostname.replace(/^www\./, ''), author }, title: typeof data.name === 'string' ? data.name.trim() : '', description: typeof data.description === 'string' ? data.description.trim() : null, image: firstImage(data.image), language: sourceLanguage, originalLanguage: sourceLanguage, translatedFrom: null, servings: amount ? { amount, label: yieldText || null } : null, times: { prepMinutes: parseDuration(data.prepTime), cookMinutes: parseDuration(data.cookTime), totalMinutes: parseDuration(data.totalTime) }, ingredients, ingredientGroups: [], instructions, flow: makeFlow(instructions), equipment: [], notes: [], nutrition: data.nutrition && typeof data.nutrition === 'object' ? Object.fromEntries(Object.entries(data.nutrition as Record<string, unknown>).filter(([, v]) => typeof v === 'string')) : null });
 }
 
 export function normalizeAiRecipe(value: unknown): Recipe { return RecipeSchema.parse(value); }
