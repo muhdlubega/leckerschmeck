@@ -59,28 +59,54 @@ export function downloadFile(name: string, content: string, type: string) {
 export function downloadRecipeFlowPng(recipe: Recipe, ingredients: Ingredient[], numberStyle: 'fraction' | 'decimal') {
   const stages = buildProgressiveStages(recipe, ingredients);
   const width = 1500;
-  const rowHeights = stages.map(stage => Math.max(250, 150 + Math.max(stage.ingredients.length + stage.inputs.length, 2) * 38));
-  const height = 250 + rowHeights.reduce((sum, value) => sum + value + 28, 0);
   const canvas = document.createElement('canvas');
   canvas.width = width;
+  const measureCtx = canvas.getContext('2d');
+  if (!measureCtx) return;
+
+  const titleFont = '700 54px Georgia, serif';
+  const itemFont = '24px Arial, sans-serif';
+  const actionFont = '700 35px Georgia, serif';
+  const detailFont = '22px Arial, sans-serif';
+  const resultFont = '700 20px Arial, sans-serif';
+  const labelFont = '700 18px Arial, sans-serif';
+  const titleLines = wrapCanvasLines(measureCtx, recipe.title, width - 144, titleFont);
+  const headerHeight = Math.max(250, 54 + titleLines.length * 64 + 88);
+  const layouts = stages.map(stage => {
+    const itemEntries = [
+      ...stage.inputs.map(input => `Carry forward: ${input}`),
+      ...stage.ingredients.map(item => ingredientLine(item, numberStyle)),
+    ];
+    const items = (itemEntries.length ? itemEntries : ['Use the result from the previous stage.'])
+      .map(text => wrapCanvasLines(measureCtx, text, 464, itemFont));
+    const meta = wrapCanvasLines(measureCtx, `ACTION ${stage.order}${stageMeta(stage) ? `  |  ${stageMeta(stage)}` : ''}`, 646, labelFont);
+    const action = wrapCanvasLines(measureCtx, stage.action, 646, actionFont);
+    const detail = stage.detail ? wrapCanvasLines(measureCtx, stage.detail, 646, detailFont) : [];
+    const result = wrapCanvasLines(measureCtx, `RESULT: ${stage.output}`, 610, resultFont);
+    const itemsHeight = items.reduce((sum, lines) => sum + lines.length * 34, 0) + Math.max(0, items.length - 1) * 14;
+    const addHeight = 28 + 22 + 22 + itemsHeight + 30;
+    const actionHeight = 28 + meta.length * 24 + 18 + action.length * 44 + (detail.length ? 16 + detail.length * 32 : 0) + 22 + result.length * 30 + 34;
+    return { stage, items, meta, action, detail, result, rowHeight: Math.max(260, addHeight, actionHeight) };
+  });
+  const height = headerHeight + layouts.reduce((sum, layout) => sum + layout.rowHeight + 28, 0) + 70;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
+  ctx.textBaseline = 'top';
 
   ctx.fillStyle = '#fffdf7';
   ctx.fillRect(0, 0, width, height);
   ctx.fillStyle = '#3d704d';
   ctx.fillRect(0, 0, 24, height);
   ctx.fillStyle = '#26372b';
-  ctx.font = '700 54px Georgia, serif';
-  drawWrappedText(ctx, recipe.title, 72, 82, width - 144, 64, 2);
+  ctx.font = titleFont;
+  drawTextLines(ctx, titleLines, 72, 54, 64);
   ctx.fillStyle = '#65736a';
   ctx.font = '24px Arial, sans-serif';
-  ctx.fillText(`${recipe.servings?.amount ?? 'N/A'} servings · Prep ${formatMinutes(recipe.times.prepMinutes)} · Cook ${formatMinutes(recipe.times.cookMinutes)}`, 76, 190);
+  ctx.fillText(`${recipe.servings?.amount ?? 'N/A'} servings · Prep ${formatMinutes(recipe.times.prepMinutes)} · Cook ${formatMinutes(recipe.times.cookMinutes)}`, 76, 54 + titleLines.length * 64 + 24);
 
-  let y = 230;
-  stages.forEach((stage, index) => {
-    const rowHeight = rowHeights[index];
+  let y = headerHeight;
+  layouts.forEach(({ stage, items, meta, action, detail, result, rowHeight }, index) => {
     const addX = 76;
     const addWidth = 520;
     const actionX = 710;
@@ -89,14 +115,14 @@ export function downloadRecipeFlowPng(recipe: Recipe, ingredients: Ingredient[],
     roundedRect(ctx, actionX, y, actionWidth, rowHeight, 22, '#3d704d', '#315c3f');
 
     ctx.fillStyle = '#65736a';
-    ctx.font = '700 18px Arial, sans-serif';
-    ctx.fillText(stage.ingredients.length || stage.inputs.length ? 'ADD' : 'CONTINUE', addX + 28, y + 42);
+    ctx.font = labelFont;
+    ctx.fillText(stage.ingredients.length || stage.inputs.length ? 'ADD ITEMS' : 'CONTINUE', addX + 28, y + 28);
     ctx.fillStyle = '#26372b';
-    ctx.font = '24px Arial, sans-serif';
-    let itemY = y + 82;
-    const lines = [...stage.inputs.map(input => `↳ ${input}`), ...stage.ingredients.map(item => ingredientLine(item, numberStyle))];
-    (lines.length ? lines : ['Previous result']).forEach(line => {
-      itemY = drawWrappedText(ctx, line, addX + 28, itemY, addWidth - 56, 31, 2) + 10;
+    ctx.font = itemFont;
+    let itemY = y + 72;
+    items.forEach(lines => {
+      drawTextLines(ctx, lines, addX + 28, itemY, 34);
+      itemY += lines.length * 34 + 14;
     });
 
     ctx.fillStyle = '#3d704d';
@@ -108,19 +134,26 @@ export function downloadRecipeFlowPng(recipe: Recipe, ingredients: Ingredient[],
     ctx.fill();
 
     ctx.fillStyle = 'rgba(255,255,255,.72)';
-    ctx.font = '700 18px Arial, sans-serif';
-    ctx.fillText(`STEP ${stage.order}${stageMeta(stage) ? ` · ${stageMeta(stage)}` : ''}`, actionX + 32, y + 44);
+    ctx.font = labelFont;
+    drawTextLines(ctx, meta, actionX + 32, y + 28, 24);
     ctx.fillStyle = '#fffdf7';
-    ctx.font = '700 35px Georgia, serif';
-    let actionY = drawWrappedText(ctx, stage.action, actionX + 32, y + 88, actionWidth - 64, 42, 2) + 16;
-    if (stage.detail) {
+    ctx.font = actionFont;
+    let actionY = y + 28 + meta.length * 24 + 18;
+    drawTextLines(ctx, action, actionX + 32, actionY, 44);
+    actionY += action.length * 44;
+    if (detail.length) {
+      actionY += 16;
       ctx.fillStyle = 'rgba(255,255,255,.84)';
-      ctx.font = '22px Arial, sans-serif';
-      actionY = drawWrappedText(ctx, stage.detail, actionX + 32, actionY, actionWidth - 64, 30, 3) + 18;
+      ctx.font = detailFont;
+      drawTextLines(ctx, detail, actionX + 32, actionY, 32);
+      actionY += detail.length * 32;
     }
+    actionY += 22;
+    const resultBoxHeight = result.length * 30 + 20;
+    roundedRect(ctx, actionX + 24, actionY - 10, actionWidth - 48, resultBoxHeight, 12, 'rgba(255,255,255,.10)', 'rgba(255,255,255,.18)');
     ctx.fillStyle = '#f4c89b';
-    ctx.font = '700 20px Arial, sans-serif';
-    drawWrappedText(ctx, `RESULT: ${stage.output}`, actionX + 32, Math.min(actionY, y + rowHeight - 38), actionWidth - 64, 28, 2);
+    ctx.font = resultFont;
+    drawTextLines(ctx, result, actionX + 40, actionY, 30);
     y += rowHeight + 28;
   });
 
@@ -145,8 +178,9 @@ function slug(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'recipe';
 }
 
-function drawWrappedText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number, lineHeight: number, maxLines: number) {
-  const words = text.split(/\s+/);
+function wrapCanvasLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, font: string) {
+  ctx.font = font;
+  const words = text.trim().split(/\s+/).flatMap(word => splitLongCanvasWord(ctx, word, maxWidth));
   const lines: string[] = [];
   let line = '';
   for (const word of words) {
@@ -157,10 +191,25 @@ function drawWrappedText(ctx: CanvasRenderingContext2D, text: string, x: number,
     } else line = candidate;
   }
   if (line) lines.push(line);
-  const visible = lines.slice(0, maxLines);
-  if (lines.length > maxLines) visible[maxLines - 1] = `${visible[maxLines - 1].replace(/[.,;:]?$/, '')}…`;
-  visible.forEach((value, index) => ctx.fillText(value, x, y + index * lineHeight));
-  return y + Math.max(0, visible.length - 1) * lineHeight;
+  return lines.length ? lines : [''];
+}
+
+function splitLongCanvasWord(ctx: CanvasRenderingContext2D, word: string, maxWidth: number) {
+  if (ctx.measureText(word).width <= maxWidth) return [word];
+  const chunks: string[] = [];
+  let chunk = '';
+  for (const character of Array.from(word)) {
+    if (chunk && ctx.measureText(chunk + character).width > maxWidth) {
+      chunks.push(chunk);
+      chunk = character;
+    } else chunk += character;
+  }
+  if (chunk) chunks.push(chunk);
+  return chunks;
+}
+
+function drawTextLines(ctx: CanvasRenderingContext2D, lines: string[], x: number, y: number, lineHeight: number) {
+  lines.forEach((line, index) => ctx.fillText(line, x, y + index * lineHeight));
 }
 
 function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number, fill: string, stroke: string) {
