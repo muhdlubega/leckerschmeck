@@ -51,7 +51,11 @@ export function splitFlowPhases(flow: FlowNode[]): {
     };
   }
 
-  const finishOffset = flow.slice(firstCook + 1).findIndex(isFinishingNode);
+  // Resting after heat is a finishing action, while resting before the first
+  // cooking node (for dough or marinades) remains preparation.
+  const finishOffset = flow.slice(firstCook + 1).findIndex(node =>
+    node.type === 'rest' || isFinishingNode(node) || /\b(?:rest|stand)\b/i.test(searchableText(node)),
+  );
   const firstFinish = finishOffset < 0
     ? Math.max(firstCook + 1, flow.length - lastSteps)
     : firstCook + 1 + finishOffset;

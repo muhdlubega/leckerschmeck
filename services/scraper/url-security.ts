@@ -17,12 +17,22 @@ export async function assertSafeUrl(input: string): Promise<URL> {
   const hostname = url.hostname.toLowerCase().replace(/\.$/, '');
   if (forbiddenHosts.has(hostname) || hostname.endsWith('.local') || hostname.endsWith('.internal') || hostname.endsWith('.localhost') || isPrivateIp(hostname)) throw new Error('UNSAFE_URL');
   if (!/^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname) && !hostname.includes(':')) {
-    for (const type of ['A', 'AAAA']) {
-      const response = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(hostname)}&type=${type}`, { headers: { accept: 'application/dns-json' }, signal: AbortSignal.timeout(3_000) });
-      if (!response.ok) throw new Error('DNS_VALIDATION_FAILED');
-      const payload = await response.json() as { Answer?: Array<{ data: string }> };
-      if ((payload.Answer ?? []).some(answer => isPrivateIp(answer.data))) throw new Error('UNSAFE_URL');
-    }
+    const answers = await Promise.all(['A', 'AAAA'].map(type => resolveDns(hostname, type)));
+    if (answers.flat().some(isPrivateIp)) throw new Error('UNSAFE_URL');
   }
   return url;
+}
+
+async function resolveDns(hostname: string, type: string) {
+  const query = `name=${encodeURIComponent(hostname)}&type=${type}`;
+  const resolvers = [`https://cloudflare-dns.com/dns-query?${query}`, `https://dns.google/resolve?${query}`];
+  for (const resolver of resolvers) {
+    try {
+      const response = await fetch(resolver, { headers: { accept: 'application/dns-json' }, signal: AbortSignal.timeout(3_000) });
+      if (!response.ok) continue;
+      const payload = await response.json() as { Answer?: Array<{ data?: string }> };
+      return (payload.Answer ?? []).map(answer => answer.data ?? '').filter(Boolean);
+    } catch { /* try the backup resolver */ }
+  }
+  throw new Error('DNS_VALIDATION_FAILED');
 }
