@@ -50,6 +50,13 @@
 
 body { font-family: var(--font-ui), Arial, Helvetica, sans-serif; }
 
+.recipe-print-view { display: none; }
+.progressive-stage-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
+
+@media (min-width: 640px) {
+  .progressive-stage-grid { grid-template-columns: minmax(0, .9fr) 3rem minmax(0, 1.1fr); }
+}
+
 .animated-hero-background {
   position: relative;
   isolation: isolate;
@@ -151,10 +158,19 @@ body { font-family: var(--font-ui), Arial, Helvetica, sans-serif; }
 }
 
 @media print {
-  header, form, button, .print\:hidden { display: none !important; }
+  @page { size: A4 portrait; margin: 12mm; }
+  header, form, button, .print\:hidden, main > div.fixed, .recipe-screen-view { display: none !important; }
+  .recipe-print-view { display: block !important; }
   body { background: white; color: black; }
   main { min-height: auto !important; }
-  section { max-width: none !important; padding: 0 !important; }
+  #recipe { max-width: none !important; padding: 0 !important; }
+  .progressive-flow { border: 0 !important; }
+  .progressive-stage-list { padding: 0 !important; }
+  .progressive-stage-wrap { break-inside: avoid; page-break-inside: avoid; }
+  .progressive-stage-grid { grid-template-columns: minmax(0, .9fr) 2rem minmax(0, 1.1fr); }
+  .progressive-action-cell { background: #3d704d !important; color: white !important; print-color-adjust: exact; }
+  .progressive-add-cell { background: white !important; }
+  .progressive-arrow { border-block: 0 !important; }
   * { box-shadow: none !important; }
 }
 
